@@ -1,0 +1,31 @@
+name: Build Site APK
+on:
+  workflow_dispatch:
+  push:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" >/dev/null
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.7' }
+      - name: Build release APK
+        run: gradle assembleRelease --no-daemon --stacktrace
+      - name: Rename APK
+        run: cp app/build/outputs/apk/release/app-release.apk televizia-site-app.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: televizia-site-app, path: televizia-site-app.apk }
+      - name: Publish APK as Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: site-app-${{ github.run_number }}
+          name: TELEVIZIA საიტი (აპლიკაცია) #${{ github.run_number }}
+          files: televizia-site-app.apk
