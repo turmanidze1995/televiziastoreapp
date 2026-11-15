@@ -7,20 +7,25 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: TeleviziaSiteApp
     steps:
       - uses: actions/checkout@v4
+      - name: Unpack uploaded zip
+        run: |
+          Z="$(ls -v televizia_site_app*.zip | tail -1)"
+          echo "Using $Z"
+          mkdir -p /tmp/proj
+          unzip -oq "$Z" -d /tmp/proj
+          S="$(find /tmp/proj -name settings.gradle.kts | head -1)"
+          echo "PROJ=$(dirname "$S")" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: '8.7' }
       - name: Build release APK
-        run: gradle assembleRelease --no-daemon --stacktrace
-      - name: Rename APK
-        run: cp app/build/outputs/apk/release/app-release.apk ../televizia-site-app.apk
-        
+        run: |
+          cd "$PROJ"
+          gradle assembleRelease --no-daemon --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/televizia-site-app.apk"
       - uses: actions/upload-artifact@v4
         with: { name: televizia-site-app, path: televizia-site-app.apk }
       - name: Publish APK as Release
